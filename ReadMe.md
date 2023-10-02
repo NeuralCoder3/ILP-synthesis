@@ -19,8 +19,8 @@ Instead, we use additional variables, an upper bound, and multiple one-sided con
 - $a-b \geq 1-M\cdot(1-c_>)$
 - $b-a \geq 1-M\cdot(1-c_<)$
 - $c_>+c_<\leq 1$
-- $a-b\geq -c_<$
-- $b-a\geq -c_>$
+- $a-b\geq -M\cdot c_<$
+- $b-a\geq -M\cdot c_>$
 
 $M$ is a bound large enough to consume $a$ and $b$.
 The last two constraints prevent the $c_<=c_>=0$ case when $a\neq b$.
@@ -32,8 +32,15 @@ The intended one and $c_<=c_>=0$.
 We want to synthesize a sorting algorithm with the conditional move and compare instructions.
 We therefore have the commands `noop`, `cmovg a b` (16), `cmovl a b` (16), `cmp a b` (3-16).
 
+We encode the state of the registers (three and one swap) as integers.
+The flags (greater, less) are represented as binary variables.
+We simultanously encode all possible permutations to represent a general sorting indepedent of inputs.
 
+Futhermore, we have binary variable for every possible command.
 
+Additionally, for every (interesting) pair of registers in one permutation and timestamp, we add comparison decisions that encode which register contains a greater value.
+
+For the first timestamp, we initialize the register $i$ with $i$, the swap register with $0$, and the flags with $0$.
 
 ## Links
 - [Python-MIP](https://docs.python-mip.com/en/latest/examples.html)

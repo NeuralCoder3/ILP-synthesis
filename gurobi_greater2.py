@@ -21,8 +21,8 @@ for av,bv in [(2,2),(2,3),(3,2),(2,5),(5,2)]:
     m.addConstr(a-b >= 1-M*(1-cg))
     m.addConstr(b-a >= 1-M*(1-cl))
     m.addConstr(cg+cl <= 1)
-    m.addConstr(a-b >= -cl)
-    m.addConstr(b-a >= -cg)
+    m.addConstr(a-b >= -M*cl)
+    m.addConstr(b-a >= -M*cg)
     
     m.setParam(GRB.Param.PoolSearchMode, 2)
     m.optimize()

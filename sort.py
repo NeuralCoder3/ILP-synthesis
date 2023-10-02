@@ -6,7 +6,7 @@ from gurobipy import GRB
 import itertools
 
 # timestamps = 14
-timestamps = 2
+timestamps = 3
 number_registers = 3
 swap = 1
 total_registers = number_registers + swap
@@ -59,13 +59,18 @@ for i in range(timestamps):
         c_cmp[i][a] = {}
         c_cmovg[i][a] = {}
         c_cmovl[i][a] = {}
-        c_acmovg[i][a] = {}
-        c_acmovl[i][a] = {}
+        for k in range(permutation_count):
+            if k not in c_acmovg[i]:
+                c_acmovg[i][k] = {}
+                c_acmovl[i][k] = {}
+            c_acmovg[i][k][a] = {}
+            c_acmovl[i][k][a] = {}
         for b in range(total_registers):
             c_cmovg[i][a][b] = m.addVar(name="c_cmovg[%d][%d][%d]" % (i,a,b), vtype=GRB.BINARY)
             c_cmovl[i][a][b] = m.addVar(name="c_cmovl[%d][%d][%d]" % (i,a,b), vtype=GRB.BINARY)
-            c_acmovg[i][a][b] = m.addVar(name="c_acmovg[%d][%d][%d]" % (i,a,b), vtype=GRB.BINARY)
-            c_acmovl[i][a][b] = m.addVar(name="c_acmovl[%d][%d][%d]" % (i,a,b), vtype=GRB.BINARY)
+            for k in range(permutation_count):
+                c_acmovg[i][k][a][b] = m.addVar(name="c_acmovg[%d][%d][%d][%d]" % (i,k,a,b), vtype=GRB.BINARY)
+                c_acmovl[i][k][a][b] = m.addVar(name="c_acmovl[%d][%d][%d][%d]" % (i,k,a,b), vtype=GRB.BINARY)
             if a < b:
                 c_cmp[i][a][b] = m.addVar(name="c_cmp[%d][%d][%d]" % (i,a,b), vtype=GRB.BINARY)
             
@@ -137,29 +142,36 @@ for i in range(timestamps-1):
             for b in c_cmp[i][a]:
                 f_gt_new += c_cmp[i][a][b] * is_gt[i][k][a][b]
                 f_lt_new += c_cmp[i][a][b] * is_lt[i][k][a][b]
-        m.addConstr(fgt[i+1][k] == f_gt_new, name="fgt[%d][%d]" % (i+1,k))
-        m.addConstr(flt[i+1][k] == f_lt_new, name="flt[%d][%d]" % (i+1,k))
+        m.addConstr(fgt[i+1][k] == f_gt_new, name="fgt_update[%d][%d]" % (i+1,k))
+        m.addConstr(flt[i+1][k] == f_lt_new, name="flt_update[%d][%d]" % (i+1,k))
         
-    for a in c_cmovg[i]:    
-        for b in c_cmovg[i][a]:
-            m.addConstr(c_acmovg[i][a][b] == c_cmovg[i][a][b] * fgt[i][k], name="c_acmovg_act[%d][%d][%d]" % (i,a,b))
-    for a in c_cmovl[i]:
-        for b in c_cmovl[i][a]:
-            m.addConstr(c_acmovl[i][a][b] == c_cmovl[i][a][b] * flt[i][k], name="c_acmovl_act[%d][%d][%d]" % (i,a,b))
+    for k in range(permutation_count):
+        for a in c_cmovg[i]:    
+            for b in c_cmovg[i][a]:
+                m.addConstr(c_acmovg[i][k][a][b] == c_cmovg[i][a][b] * fgt[i][k], name="c_acmovg_act[%d][%d][%d][%d]" % (i,k,a,b))
+        for a in c_cmovl[i]:
+            for b in c_cmovl[i][a]:
+                m.addConstr(c_acmovl[i][k][a][b] == c_cmovl[i][a][b] * flt[i][k], name="c_acmovl_act[%d][%d][%d][%d]" % (i,k,a,b))
             
     # mov command encoding => value changes
     for k in range(permutation_count):
         for a in range(total_registers):
-            no_change = 1 - sum(c_cmovg[i][a].values()) - sum(c_cmovl[i][a].values())
+            # no_change = 1 - sum(c_cmovg[i][a].values()) - sum(c_cmovl[i][a].values())
+            no_change = 1 - sum(c_acmovg[i][k][a].values()) - sum(c_acmovl[i][k][a].values())
             v_new = no_change * v[i][k][a]
             for b in c_cmovg[i][a]:
-                v_new += c_acmovg[i][a][b] * v[i][k][b]
+                v_new += c_acmovg[i][k][a][b] * v[i][k][b]
             for b in c_cmovl[i][a]:
-                v_new += c_acmovl[i][a][b] * v[i][k][b]
+                v_new += c_acmovl[i][k][a][b] * v[i][k][b]
+            m.addConstr(v[i+1][k][a] == v_new, name="v_update[%d][%d][%d]" % (i+1,k,a))
                 
     
 # commands in final step are ignored
         
+# debug testing
+m.addConstr(c_cmp[0][0][1] == 1)
+# m.addConstr(c_cmovg[1][0][1] == 1)
+m.addConstr(c_cmovl[1][1][2] == 1)
         
 # m.Params.LogToConsole = 0
 m.optimize()
@@ -180,10 +192,12 @@ for i in range(timestamps):
                 r_is_lt = is_lt[i][k][a][a+1].X
                 r_is_gt = is_gt[i][k][a][a+1].X
                 cmp_str = ("<" if r_is_lt else "") + (">" if r_is_gt else "")
+                if not r_is_lt and not r_is_gt:
+                    cmp_str = "="
                 cmp_str = " " + cmp_str + " "
                 # cmp_str = ", "
             print(str(int(r_v.x)), end=cmp_str)
-        print()
+        print("  " + flag_str)
 
     command = ""
     if c_noop[i].X:

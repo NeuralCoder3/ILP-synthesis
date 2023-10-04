@@ -27,6 +27,11 @@ The last two constraints prevent the $c_<=c_>=0$ case when $a\neq b$.
 Without them, $a=b$ would force $c_<=c_>=0$ but $a>b$ and $a<b$ would have two solutions:
 The intended one and $c_<=c_>=0$.
 
+
+If we are only interested in one decision variabl $c$ such that $c=1 \leftrightarrow a\geq b$, we could use
+- $a-b \leq M\cdot y$
+- $a-b \geq - M\cdot (1-y)$
+
 ## Sorting
 
 We want to synthesize a sorting algorithm with the conditional move and compare instructions.

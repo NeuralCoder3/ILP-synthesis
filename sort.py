@@ -5,8 +5,23 @@ from gurobipy import GRB
 
 import itertools
 
-# timestamps = 14
-timestamps = 12
+
+# Improvements:
+# SOS1 for commands (only 1 is non-zero)
+# quadratic -> linear
+#   flag
+#   acmov[gl]
+#   new value
+# Heuristcs:
+#  initial cmp (cmov without flag useless)
+#  no cmp after cmp
+#  
+
+
+
+
+timestamps = 14
+# timestamps = 12
 # timestamps = 11 # no sol found for 123
 # timestamps = 9 # no sol found for 123
 # timestamps = 3
@@ -18,7 +33,7 @@ permutations = list(itertools.permutations(range(1,number_registers+1)))
 permutation_count = len(permutations)
 
 m = gp.Model("sort")
-m.setParam('PRESOLVE', 0)
+# m.setParam('PRESOLVE', 0)
 # m.setParam(GRB.Param.SolutionNumber, sol)
 # m.Params.LogToConsole = 0
 
@@ -81,6 +96,13 @@ for i in range(timestamps):
                 c_acmovl[i][k][a][b] = m.addVar(name="c_acmovl[%d][%d][%d][%d]" % (i,k,a,b), vtype=GRB.BINARY)
             if a < b:
                 c_cmp[i][a][b] = m.addVar(name="c_cmp[%d][%d][%d]" % (i,a,b), vtype=GRB.BINARY)
+                
+# unnecessary helper constraints
+# for i in range(timestamps):
+#     for k in range(permutation_count):
+#         for a in range(total_registers):
+#             m.addConstr(v[i][k][a] >= 0, name="v_nonneg[%d][%d][%d]" % (i,k,a))
+#             m.addConstr(v[i][k][a] <= number_registers, name="v_ub[%d][%d][%d]" % (i,k,a))
             
             
 # initialize variables
@@ -94,7 +116,7 @@ for k in range(permutation_count):
         m.addConstr(v[0][k][number_registers+b] == 0, name="initVS[%d][%d]" % (k,number_registers+b))
         
 # set up comparison constraints
-M = 1000 # upper bound
+M = 10 # upper bound
 for i in range(timestamps):
     for k in range(permutation_count):
         for a in range(total_registers):
@@ -109,11 +131,11 @@ for i in range(timestamps):
                     name = "is_cmp[%d][%d][%d][%d]" % (i,k,a,b)
                     # TODO: use less constraints
                     # TODO: maybe use max/ub instead of M
-                    m.addConstr(va - vb >= 1-M*(1-c_gt), name=name+"_cg1")
-                    m.addConstr(vb - va >= 1-M*(1-c_lt), name=name+"_cl1")
-                    m.addConstr(c_lt + c_gt <= 1, name=name+"_c")
-                    m.addConstr(vb - va >= -M*c_gt, name=name+"_cg2")
-                    m.addConstr(va - vb >= -M*c_lt, name=name+"_cl2")
+                    m.addLConstr(va - vb >= 1-M*(1-c_gt), name=name+"_cg1")
+                    m.addLConstr(vb - va >= 1-M*(1-c_lt), name=name+"_cl1")
+                    m.addLConstr(c_lt + c_gt <= 1, name=name+"_c")
+                    m.addLConstr(vb - va >= -M*c_gt, name=name+"_cg2")
+                    m.addLConstr(va - vb >= -M*c_lt, name=name+"_cl2")
 
 
 # per step constraints (system evolution -- command semantics)
@@ -201,9 +223,9 @@ for i in range(timestamps-1):
 
 # goal
 # all sorted i => i
-# for k in range(permutation_count):
-#     for a in range(number_registers):
-#         m.addConstr(v[timestamps-1][k][a] == a+1)
+for k in range(permutation_count):
+    for a in range(number_registers):
+        m.addConstr(v[timestamps-1][k][a] == a+1)
 
 # same across all permutations
 for a in range(number_registers):
@@ -227,11 +249,30 @@ for k in range(permutation_count):
 
 
         
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 # noops = 0
 # for i in range(timestamps):
 #     noops += c_noop[i]
-for i in range(timestamps):
-    m.addConstr(c_noop[i]==0)
+# for i in range(timestamps):
+#     m.addConstr(c_noop[i]==0, name="no_noop[%d]" % i)
 
 # m.setObjective(noops, GRB.MAXIMIZE)
         
@@ -240,15 +281,27 @@ m.write("sort_raw.lp")
 m.optimize()
 # m.write("sort_opt.lp")
 
-constraint_violation = m.getAttr(GRB.Attr.ConstrVio)
-print("Constraint violation: %f" % constraint_violation)
-if constraint_violation > 0.1:
-    exit(1)
-
 print("Found %d solutions" % m.SolCount)
 if m.SolCount == 0:
     exit(1)
 
+constraint_violation = m.getAttr(GRB.Attr.ConstrVio)
+print("Constraint violation: %f" % constraint_violation)
+if constraint_violation > 0.1:
+    pass
+    # exit(1)
+    # list all violated constraints
+    # for c in m.getConstrs():
+    #     if (c.slack)>=0.1:
+    #         print(c.constrName)
+    #         print(c.slack)
+    #         print(c.RHS)
+        # print(dir(c))
+        # 'CBasis', 'CDualNorm', 'CTag', 'ConstrName', 'DStart', 'FarkasDual', 'IISConstr', 'IISConstrForce', 'Lazy', 'Pi', 'RHS', 'SARHSLow', 'SARHSUp', 'ScenNRHS', 'Sense', 'Slack',
+        # if c.violation > 0.1:
+        #     print(c.constrName, c.violation)
+
+commands = []
 for i in range(timestamps):
     print("Timestamp %d" % i)
     for k in range(permutation_count):
@@ -293,7 +346,11 @@ for i in range(timestamps):
                 # print(c_cmovl[i][a][b].X)
 
     print("Execute command: %s" % command)
+    commands.append(command)
     print()
+    
+print("Commands: ")
+print("\n".join(commands))
 
 def val(x):
     num_val = int(x.x+0.5)
@@ -361,3 +418,7 @@ with open("sort_log_ordered.txt", "w") as f:
 with open("sort_constraints.txt","w") as f:
     for c in m.getConstrs():
         print(c.constrName, c.sense, c.RHS, file=f)
+        
+        
+if constraint_violation > 0.1:
+    print(f"There were {constraint_violation} constraint violations")

@@ -32,6 +32,14 @@ If we are only interested in one decision variabl $c$ such that $c=1 \leftrighta
 - $a-b \leq M\cdot y$
 - $a-b \geq - M\cdot (1-y)$
 
+## Coupling
+
+
+- $i2 = i1*b$
+- $i2 <= i1$
+- $i2 >= i1-(1-b)*M$
+- $i2 <= b*M$
+
 ## Sorting
 
 We want to synthesize a sorting algorithm with the conditional move and compare instructions.

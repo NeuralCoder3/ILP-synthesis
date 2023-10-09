@@ -278,6 +278,8 @@ for k in range(permutation_count):
         
 # m.Params.LogToConsole = 0
 m.write("sort_raw.lp")
+# for callbacks: https://support.gurobi.com/hc/en-us/community/posts/16882007649297-Print-intermediate-solutions-Objective-value-and-variables-while-running-MIP-using-gurobi-in-python-
+m.params.SolFiles = "solution"
 m.optimize()
 # m.write("sort_opt.lp")
 

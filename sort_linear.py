@@ -4,7 +4,8 @@ from mip import Model, xsum, BINARY, INTEGER, CBC, Var, minimize, maximize
 import conflict
 
 # timestamps = 14
-timestamps = 12
+# timestamps = 12
+timestamps = 11
 # timestamps = 11
 timestamps+=1
 number_registers = 3
@@ -74,17 +75,20 @@ fgt = {}
 flt = {}
 
 # c_noop = {}
-c_cmp = {}
+c_cmp   = {}
+c_mov   = {}
 c_cmovg = {}
 c_cmovl = {}
 
 # commands
 for i in range(timestamps):
     c_cmp[i] = {}
+    c_mov[i] = {}
     c_cmovg[i] = {}
     c_cmovl[i] = {}
     for a in range(total_registers):
         c_cmp[i][a] = {}
+        c_mov[i][a] = {}
         c_cmovg[i][a] = {}
         c_cmovl[i][a] = {}
         for b in range(total_registers):
@@ -94,6 +98,7 @@ for i in range(timestamps):
             c_cmovl[i][a][b] = m.add_var(name="c_cmovl[%d][%d][%d]" % (i,a,b), var_type=BINARY)
             if a < b:
                 c_cmp[i][a][b] = m.add_var(name="c_cmp[%d][%d][%d]" % (i,a,b), var_type=BINARY)
+            c_mov[i][a][b] = m.add_var(name="c_mov[%d][%d][%d]" % (i,a,b), var_type=BINARY)
 
 # registers and flags
 for i in range(timestamps):
@@ -131,21 +136,25 @@ c_acmovg = {}
 c_acmovl = {}
 v_aval_g = {}
 v_aval_l = {}
+v_aval_m = {}
 for i in range(timestamps):
     c_acmovg[i] = {}
     c_acmovl[i] = {}
     v_aval_g[i] = {}
     v_aval_l[i] = {}
+    v_aval_m[i] = {}
     for k in range(permutation_count):
         c_acmovg[i][k] = {}
         c_acmovl[i][k] = {}
         v_aval_g[i][k] = {}
         v_aval_l[i][k] = {}
+        v_aval_m[i][k] = {}
         for a in range(total_registers):
             c_acmovg[i][k][a] = {}
             c_acmovl[i][k][a] = {}
             v_aval_g[i][k][a] = {}
             v_aval_l[i][k][a] = {}
+            v_aval_m[i][k][a] = {}
             for b in range(total_registers):
                 if a == b:
                     continue
@@ -156,8 +165,11 @@ for i in range(timestamps):
                 
                 v_aval_g[i][k][a][b] = m.add_var(name="v_aval_g[%d][%d][%d][%d]" % (i,k,a,b), var_type=INTEGER)
                 v_aval_l[i][k][a][b] = m.add_var(name="v_aval_l[%d][%d][%d][%d]" % (i,k,a,b), var_type=INTEGER)
+                v_aval_m[i][k][a][b] = m.add_var(name="v_aval_m[%d][%d][%d][%d]" % (i,k,a,b), var_type=INTEGER)
                 couple(v_aval_g[i][k][a][b], c_acmovg[i][k][a][b], v[i][k][b])
                 couple(v_aval_l[i][k][a][b], c_acmovl[i][k][a][b], v[i][k][b])
+                
+                couple(v_aval_m[i][k][a][b], c_mov[i][a][b], v[i][k][b])
                 
                 
                 
@@ -186,6 +198,37 @@ for i in range(timestamps):
 #     swap(4, B, C)
 #     swap(8, A, B)
 
+if True:
+    X = 0
+    Y = 1
+    Z = 2
+    S = 3
+    
+    # ("mov"  , S, Y),
+    # ("cmp"  , Z, Y), 
+    # ("cmovl", S, Z),
+    # ("cmovg", Y, Z),
+    m +=   c_mov[0][S][Y] == 1
+    m +=   c_cmp[1][Y][Z] == 1
+    m += c_cmovg[2][S][Z] == 1
+    m += c_cmovl[3][Y][Z] == 1
+    
+    # ("mov"  , Z, X),
+    # ("cmp"  , Y, X), 
+    # ("cmovl", Z, Y),
+    # ("cmovl", Y, X),
+    # m +=   c_mov[4][Z][X] == 1
+    # m +=   c_cmp[5][X][Y] == 1
+    # m += c_cmovg[6][Z][Y] == 1
+    # m += c_cmovg[7][Y][X] == 1
+    
+    # ("cmp"  , S, Z),
+    # ("cmovl", X, S),
+    # ("cmovg", Z, S), 
+    # m +=   c_cmp[8][Z][S] == 1
+    # m += c_cmovg[9][X][S] == 1
+    # m += c_cmovl[10][Z][S] == 1
+
 
 # init values
 for k in range(permutation_count):
@@ -199,13 +242,19 @@ for k in range(permutation_count):
         
         
 # evolution of system (execute commands)
-for i in range(timestamps-1):
+for i in range(timestamps):
     # execute one command
     # TODO: check that list comprehension works as intended
     cmps = xsum([c_cmp[i][a][b] for a in c_cmp[i] for b in c_cmp[i][a]])
+    movs = xsum([c_mov[i][a][b] for a in c_mov[i] for b in c_mov[i][a]])
     cmovgs = xsum([c_cmovg[i][a][b] for a in c_cmovg[i] for b in c_cmovg[i][a]])
     cmovls = xsum([c_cmovl[i][a][b] for a in c_cmovl[i] for b in c_cmovl[i][a]])
-    all_commands = cmps + cmovgs + cmovls
+    all_commands = cmps + movs + cmovgs + cmovls
+    
+    if i == timestamps-1:
+        m += (all_commands == 0), "no_final_command"
+        break
+    
     m += (all_commands == 1), "all_commands[%d]" % i
 
     no_cmp = 1-cmps
@@ -241,7 +290,8 @@ for i in range(timestamps-1):
     #         # no successfull mov with dest register a
             stay_same = 1-\
                 xsum([c_acmovg[i][k][a][b] for b in c_cmovg[i][a]]) -\
-                xsum([c_acmovl[i][k][a][b] for b in c_cmovl[i][a]])
+                xsum([c_acmovl[i][k][a][b] for b in c_cmovl[i][a]]) -\
+                xsum([c_mov[i][a][b] for b in c_mov[i][a]])
             stay_same_var = m.add_var(name="stay_same_var[%d][%d][%d]" % (i,k,a), var_type=BINARY)
             m += (stay_same_var == stay_same), "stay_same_var_def[%d][%d][%d]" % (i,k,a)
             act_prev_v = m.add_var(name="act_prev_v[%d][%d][%d]" % (i,k,a), var_type=INTEGER)
@@ -249,16 +299,18 @@ for i in range(timestamps-1):
             
             v_new_val = act_prev_v + \
                 xsum([v_aval_g[i][k][a][b] for b in c_cmovg[i][a]]) + \
-                xsum([v_aval_l[i][k][a][b] for b in c_cmovl[i][a]])
+                xsum([v_aval_l[i][k][a][b] for b in c_cmovl[i][a]]) + \
+                xsum([v_aval_m[i][k][a][b] for b in c_mov[i][a]])
             m += (v[i+1][k][a] == v_new_val), "v_evo[%d][%d][%d]" % (i,k,a)
 
 # no command at last timestamp
-t = timestamps-1
-cmps = xsum([c_cmp[t][a][b] for a in c_cmp[t] for b in c_cmp[t][a]])
-cmovgs = xsum([c_cmovg[t][a][b] for a in c_cmovg[t] for b in c_cmovg[t][a]])
-cmovls = xsum([c_cmovl[t][a][b] for a in c_cmovl[t] for b in c_cmovl[t][a]])
-all_commands = cmps + cmovgs + cmovls
-m += (all_commands == 0), "all_commands[%d]" % t
+# t = timestamps-1
+# cmps = xsum([c_cmp[t][a][b] for a in c_cmp[t] for b in c_cmp[t][a]])
+# cmovgs = xsum([c_cmovg[t][a][b] for a in c_cmovg[t] for b in c_cmovg[t][a]])
+# cmovls = xsum([c_cmovl[t][a][b] for a in c_cmovl[t] for b in c_cmovl[t][a]])
+# movs = xsum([c_mov[t][a][b] for a in c_mov[t] for b in c_mov[t][a]])
+# all_commands = cmps + movs + cmovgs + cmovls
+# m += (all_commands == 0), "all_commands[%d]" % t
 
 
 # goal
@@ -292,21 +344,31 @@ for k in range(permutation_count):
                 
                 
 # heuristics (noop-prevention)
-m += c_cmp[0][0][1] == 1
+# m += c_cmp[0][0][1] == 1
+                
+# no two cmp in a row
+for i in range(timestamps-1):
+    cmps = xsum([c_cmp[i][a][b] for a in c_cmp[i] for b in c_cmp[i][a]])
+    cmps_next = xsum([c_cmp[i+1][a][b] for a in c_cmp[i+1] for b in c_cmp[i+1][a]])
+    m += (cmps + cmps_next <= 1), "no_two_cmp_in_a_row[%d]" % i
+                
+# no noop in general (+use flags)
                 
                 
 # print intermediate solutions
 
 # alibi objective to guide and have a ranking
-cmp_sum = xsum([c_cmp[i][a][b] for i in range(timestamps) for a in c_cmp[i] for b in c_cmp[i][a]])
+# cmp_sum = xsum([c_cmp[i][a][b] for i in range(timestamps) for a in c_cmp[i] for b in c_cmp[i][a]])
 # m.objective = minimize(cmp_sum)
-m.objective = maximize(cmp_sum)
+# m.objective = maximize(cmp_sum)
 
 # at most one solution
 m.max_solutions = 1
 m.optimize(max_solutions=1)
                 
                 
+# call with
+# python sort_linear.py | tee sort_linear_$(date +%Y-%m-%d_%H-%M-%S).txt
                 
                 
                 

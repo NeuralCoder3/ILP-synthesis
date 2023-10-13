@@ -208,10 +208,10 @@ if True:
     # ("cmp"  , Z, Y), 
     # ("cmovl", S, Z),
     # ("cmovg", Y, Z),
-    m +=   c_mov[0][S][Y] == 1
-    m +=   c_cmp[1][Y][Z] == 1
-    m += c_cmovg[2][S][Z] == 1
-    m += c_cmovl[3][Y][Z] == 1
+    # m +=   c_mov[0][S][Y] == 1
+    # m +=   c_cmp[1][Y][Z] == 1
+    # m += c_cmovg[2][S][Z] == 1
+    # m += c_cmovl[3][Y][Z] == 1
     
     # ("mov"  , Z, X),
     # ("cmp"  , Y, X), 

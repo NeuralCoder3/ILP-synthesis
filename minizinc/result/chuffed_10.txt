@@ -1,0 +1,6 @@
+10 steps
+
+(pyenv) [marcel@marcel-pc minizinc]$ minizinc --solver Chuffed sort_syn.mzn sort_data.dzn
+Warning: multiple executables '../../../bin/fzn-gecode' found on the system, using '/opt/minizinc-ide/bin/fzn-gecode'
+Warning: multiple executables '../../../bin/fzn-gecode' found on the system, using '/opt/minizinc-ide/bin/fzn-gecode'
+=====UNSATISFIABLE=====

@@ -11,3 +11,26 @@
 
 
 Run with `minizinc --solver Chuffed sort_syn.mzn sort_data.dzn` for fastest solving.
+Use `-a` to print all solutions (or intermediate solutions if solve satisfiable).
+
+`time minizinc --solver Chuffed -a sort_syn.mzn sort_data.dzn | tee -a sort_sol_11_chuffed_a_order.txt`
+
+To try:
+- systematic other solvers
+- `O0` ... `O5` (`O5` does not seem to improve optimizing query)
+- [x] enforce output 123 (30s-1min -> 5s)
+
+
+With consistent renaming, every permutation should be possible as output
+=> We can restrict the search space to 1/6.
+(One could think that the compare restriction might violate this assumption but the enumeration of all programs validates it.)
+
+All programs:
+- With output order:
+  - all: 5602
+  - max mov, cmp: 2520
+  - time: 13m
+- Without output order:
+  - all: 33612
+  - max mov, cmp: 15120
+  - time: 154m

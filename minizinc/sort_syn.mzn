@@ -97,7 +97,7 @@ constraint %% change values (execute (c)mov)
 
 
 %% Goal definition
-
+%% we could mark these two as redundant constraints
 constraint %% 1..n in last step
     forall (k in 1..perm_count) (
         %% different numbers in registers
@@ -115,6 +115,18 @@ constraint %% same numbers across permutations in last step
         )
     );
 
+%% possible with consistent renaming => 1/6 search space
+constraint %% 1..n in this order in last step
+    forall (k in 1..perm_count) (
+        forall (r in 1..n) (
+            state[s,k,r] = r
+        )
+    );
+
+
+
+%% optimize mov and cmp count
+% solve minimize sum([cmd[t] != Mov /\ cmd[t] != Cmp | t in 1..(s-1)]);
 
 
 
@@ -161,6 +173,7 @@ constraint %% no two compares in a row
 %% how to print
 
 %% print all commands in the form "cmd a b"
+output ["Program:\n"];
 output ["\(cmd[t]) \(a[t]) \(b[t])\n" | t in 1..(s-1)];
 
 output ["\n"];
@@ -182,7 +195,7 @@ output ["Step: \(t)\n" ++
             if fix(flags[t,k,2]) then ">" else " " endif ++
             "\n"
          | k in 1..perm_count]) ++ 
-    if t<s then "Run : \(cmd[t]) \(a[t]) \(b[t])\n" else "" endif ++
+    if t<s then "Run: \(cmd[t]) \(a[t]) \(b[t])\n" else "" endif ++
     "\n"
     | t in 1..s]
 

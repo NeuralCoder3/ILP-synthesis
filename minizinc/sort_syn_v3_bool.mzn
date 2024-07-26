@@ -14,7 +14,8 @@ array [1..s] of var Inst: cmd;
 array [1..s] of var 1..reg: a;
 array [1..s] of var 1..reg: b;
 
-array [1..s,1..perm_count,1..reg] of var 0..n: state;
+% array [1..s,1..perm_count,1..reg] of var 0..n: state;
+array [1..s,1..perm_count,1..reg] of var 0..1: state;
 array [1..s,1..perm_count,1..2] of var bool: flags;
 
 constraint %% state[0,..] = init_perm
@@ -97,31 +98,55 @@ constraint %% change values (execute (c)mov)
 
 
 %% Goal definition
-%% we could mark these two as redundant constraints
+% constraint %% same numbers across permutations in last step
+%     forall (r in 1..n) (
+%         forall (k in 1..perm_count) (
+%             state[s,k,r] = state[s,1,r]
+%         )
+%     );
+
+%% ascending order in last step
 constraint %% 1..n in last step
     forall (k in 1..perm_count) (
-        %% different numbers in registers
-        alldifferent([state[s,k,r] | r in 1..n]) /\
-        %% all numbers in registers (1..n)
-        forall (r in 1..n) (
-            state[s,k,r] >= 1 /\ state[s,k,r] <= n
+        forall (r in 1..(n-1)) (
+            state[s,k,r] <= state[s,k,r+1]
         )
     );
 
-constraint %% same numbers across permutations in last step
-    forall (r in 1..n) (
-        forall (k in 1..perm_count) (
-            state[s,k,r] = state[s,1,r]
-        )
+%% permutation of initial state in last step
+constraint %% 1..n in last step
+    forall (k in 1..perm_count) (
+        sum([init_perm[k,r] = 0 | r in 1..n]) = sum([state[s,k,r] = 0 | r in 1..n])
+        /\ sum([init_perm[k,r] = 1 | r in 1..n]) = sum([state[s,k,r] = 1 | r in 1..n])
+        % /\ sum([init_perm[k,r] = 2 | r in 1..n]) = sum([state[s,k,r] = 2 | r in 1..n])
+        % /\ sum([init_perm[k,r] = 3 | r in 1..n]) = sum([state[s,k,r] = 3 | r in 1..n]) 
+        % /\ sum([init_perm[k,r] = 4 | r in 1..n]) = sum([state[s,k,r] = 4 | r in 1..n]) 
+
+        % forall (r in 1..n) (
+        %     % count of init[r] is the same as count of state[s,k,r]
+        %     sum([init_perm[k,r] = state[s,k,i] | i in 1..n]) =
+        %     sum([init_perm[k,r] = init_perm[k,i] | i in 1..n])
+        % )
     );
+
+%% we could mark these two as redundant constraints
+% constraint %% 1..n in last step
+%     forall (k in 1..perm_count) (
+%         %% different numbers in registers
+%         alldifferent([state[s,k,r] | r in 1..n]) /\
+%         %% all numbers in registers (1..n)
+%         forall (r in 1..n) (
+%             state[s,k,r] >= 1 /\ state[s,k,r] <= n
+%         )
+%     );
 
 %% possible with consistent renaming => 1/6 search space
-constraint %% 1..n in this order in last step
-    forall (k in 1..perm_count) (
-        forall (r in 1..n) (
-            state[s,k,r] = r
-        )
-    );
+% constraint %% 1..n in this order in last step
+%     forall (k in 1..perm_count) (
+%         forall (r in 1..n) (
+%             state[s,k,r] = r
+%         )
+%     );
 
 
 
@@ -172,12 +197,6 @@ constraint %% no two compares in a row
 
 %% how to print
 
-%% print all commands in the form "cmd a b"
-output ["Program:\n"];
-output ["\(cmd[t]) \(a[t]) \(b[t])\n" | t in 1..(s-1)];
-
-output ["\n"];
-
 %% print each state as 
 %% "Step: t"
 %% "state[t,1,1] state[t,1,2] ... state[t,1,n]"
@@ -197,7 +216,12 @@ output ["Step: \(t)\n" ++
          | k in 1..perm_count]) ++ 
     if t<s then "Run: \(cmd[t]) \(a[t]) \(b[t])\n" else "" endif ++
     "\n"
-    | t in 1..s]
+    | t in 1..s];
 
 
+output ["\n"];
 
+
+%% print all commands in the form "cmd a b"
+output ["Program:\n"];
+output ["\(cmd[t]) \(a[t]) \(b[t])\n" | t in 1..(s-1)];

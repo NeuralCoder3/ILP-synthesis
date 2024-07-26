@@ -1,0 +1,20 @@
+s = 20+1;
+n = 4;
+swap = 1;
+% 20 instructions
+% 5 registers
+% https://github.com/google-deepmind/alphadev/blob/main/sort_functions_test.cc
+perm_count = 12;
+init_perm = 
+ [| 0, 0, 0, 0,
+  | 0, 0, 1, 0,
+  | 0, 0, 1, 1,
+  | 0, 1, 0, 1,
+  | 0, 1, 1, 0,
+  | 0, 1, 1, 1,
+  | 1, 0, 0, 1,
+  | 1, 0, 1, 0,
+  | 1, 0, 1, 1,
+  | 1, 1, 0, 0,
+  | 1, 1, 1, 0,
+  | 1, 1, 1, 1, |];

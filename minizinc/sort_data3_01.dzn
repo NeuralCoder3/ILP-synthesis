@@ -1,0 +1,38 @@
+s = 11+1;
+n = 3;
+swap = 1;
+
+
+% let rec variants n = 
+%   if n = 0 then [[]]
+%   else 
+%     let v = variants (n-1) in
+%     List.map (fun ys -> 0::ys) v @
+%     List.map (fun ys -> 1::ys) v
+% let () =
+%   let vs = variants 4 in
+%   let s = 
+%   vs
+%   |> List.map (List.map string_of_int)
+%   |> List.map (String.concat ", ")
+%   |> String.concat ",\n  | "
+%   in
+%   "perm_count = "^(string_of_int (List.length vs))^";
+% init_perm = 
+%  [| "^s^", |];"
+%   |> print_endline
+
+
+
+perm_count = 8;
+init_perm = 
+ [| 0, 0, 0,
+  | 0, 0, 1,
+  | 0, 1, 0,
+  | 0, 1, 1,
+  | 1, 0, 0,
+  | 1, 0, 1,
+  | 1, 1, 0,
+  | 1, 1, 1, |];
+
+% with ascend, count 01: 3.1s

@@ -1,0 +1,37 @@
+s = 11+1;
+n = 3;
+swap = 1;
+% 20 instructions
+% 5 registers
+% https://github.com/google-deepmind/alphadev/blob/main/sort_functions_test.cc
+perm_count = 8;
+init_perm = 
+ [| false, false, false,
+  | false, false, true,
+  | false, true, false,
+  | false, true, true,
+  | true, false, false,
+  | true, false, true,
+  | true, true, false,
+  | true, true, true, |];
+
+% time minizinc --solver Chuffed sort_syn_bool.mzn sort_data3_01_bool.dzn
+
+% let rec variants n = 
+%   if n = 0 then [[]]
+%   else 
+%     let v = variants (n-1) in
+%     List.map (fun ys -> false::ys) v @
+%     List.map (fun ys -> true::ys) v
+% let () =
+%   let vs = variants 4 in
+%   let s = 
+%   vs
+%   |> List.map (List.map string_of_bool)
+%   |> List.map (String.concat ", ")
+%   |> String.concat ",\n  | "
+%   in
+%   "perm_count = "^(string_of_int (List.length vs))^";
+% init_perm = 
+%  [| "^s^", |];"
+%   |> print_endline
